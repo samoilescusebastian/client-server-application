@@ -1,0 +1,90 @@
+**************************************
+**************************************
+        Sebastian Samoilescu
+            GRUPA 325CA
+            TEMA 2 PC
+**************************************
+**************************************
+
+Server
+-------
+
+--> pastrez un vector de clienti ce au fost/sunt conectati la server
+
+--> pastrez un hashtable ce contine ca si chei topicurile inregistrate si drept valoare un vector cu
+    clientii abonati la un anumit topic(retinand si daca are sau nu SF activ)
+
+--> primesc mesajul udp de la clientii udp(prin intermediul unei structuri udp) si il parsez sub o alta
+    forma pentru a fi trimis spre un client tcp
+
+--> pentru a trimite mesajul spre clientii tcp, extrag din structura udp topicul mesajului pentru a obtine
+    din hashmap vectorul clientilor abonati la topicul respectiv
+    transmit direct mesajele petru un clinet online, sau, in cazul offline, adaug in coada din intermediul
+    structurii client pentru a fi livrate la o conectare ulterioara.
+    
+--> in cazul in care primesc un mesaj tcp de la client, voi selecta operatia corespunzatoare
+    (subscribe, unsubscribe, addClient): *subscribe -> se verifica daca utilizatorul este abonat, iar in caz contrar
+                                                       se adauga in dreptul topicului clientul alaturi de optiunea SF
+                                         *subscribe -> se verifica daca clientul este abonat. In cazul in care este abonat
+                                                       se va sterge din vectorul de clienti, clientul curent. Altfel, se va afisa
+                                                       un mesaj de eroare.
+                                        (pentru ambele situatii in caz de succes se va trimite un mesaj de feedback catre client)
+
+                                        *addClient -> apare cand un client doreeste initializeaza legatura
+                                                     In functie de statusul clientului(id existent, online/offline) se va afisa un 
+                                                     mesaj corespunzatoar.
+                                                     In cazul in care clientul se reconecteaza si are mesaje de primit ce se afla in coada,
+                                                     acestea se vor trimite.De asemenea sochetul lui va fi actualizat.
+                                                     In cazul in care clientul este conectat pentru prima oara, acesta va fi adaugat in 
+                                                     lista de clienti.
+                                        *unknown command -> alta orice comanda va fi ignorata si se va anunta cu un feedback corespunzatoar
+
+                                        in unele cazuri, cand comenzile reusesc, se va trimite un feedback cu mesaj gol
+                                        (mesajele de feedback au primii 4 octeti un int ce reprezinta dimensiunea mesajului, urmati de mesaj)
+client
+------
+
+--> acesta va se va initializa trimitand mesaje de addClient(descrise mai sus)
+
+--> in orice moment utilizatorul poate introduce comenzile explicate in server
+
+--> pentru a separa mesajele tcp a fost creata functia de receive_data
+    va face receive pe sochetul deschis comunicarii in bufferul destinat.
+    
+    Acest buffer poarta rolul de o structura auxiliara intrucat va fi construit un nou mesaj de tip(special_buffer)
+    care contine un header fix (ip, port, dimensiunea topicului/continutului).
+    
+    Dupa ce am primit informatiile in buffer, cat timp am date pentru a forma un mesaj (pe baza de header si continut),
+    formez mesaje si le trimit pentru a fi printate.
+
+    Printarea se va face pe baza tipului de mesaj (INT, FLOAT, etc)
+
+
+Mesaje si structuri
+--------------------
+
+Udp 
+---
+--> structura este cracterizata fix de campurile descrise in enunt
+
+--> se foloseste pentru a primi date de la clientul udp
+
+
+tcp
+---
+
+--> se foloseste de o parte de header (partea fixa a unui mesaj)
+    (ip, port, data_type, topic_size, content_size) si de o parte de buffer
+
+--> ultimele doua parti din header sunt folosite pentru a controla partea de buffer
+
+Mesajele de tip feedback
+------------------------
+
+--> primii 4 biti sunt ocupati de dimensiunea mesajului ce va urmati, iar dupa ei mesjaul propri-zis
+
+General
+--> pentru a nu strica bufferul kernelului(a nu lua mai multa informatie decat trebuie), folosesc un alt buffer
+    in care retin informatia neutilizata pentru a fi exploatata ulterior
+
+--> pentru transmiterea informatiilor se va forta alipirea intregului mesaj in buffernului kernelului
